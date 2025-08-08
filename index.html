@@ -18,6 +18,8 @@
       Import JSON <input type="file" id="importInput" accept="application/json">
     </label>
     <button id="clearBtn">Clear All</button>
+    <label class="zoomLabel">Zoom <input type="range" id="zoomRange" min="0.25" max="4" step="0.25"></label>
+    <button id="fitDayBtn">Fit Day</button>
   </div>
 </header>
 
@@ -108,11 +110,11 @@
       <div class="row two">
         <div>
           <label>Start</label>
-          <input type="time" id="startInput" step="900" required>
+          <input type="time" id="startInput" step="900" min="00:00" max="24:00" required>
         </div>
         <div>
           <label>End</label>
-          <input type="time" id="endInput" step="900" required>
+          <input type="time" id="endInput" step="900" min="00:00" max="24:00" required>
         </div>
       </div>
       <div class="row flags">

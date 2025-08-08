@@ -3,9 +3,10 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 const DEFAULTS = {
-  startHour: 6,
-  endHour: 22,
+  startHour: 0,
+  endHour: 24,
   workTarget: 38.5,
+  minutePx: 2,
   categories: [
     { name: "Sleep", color: "#bef264" },
     { name: "Children", color: "#fca5a5" },
@@ -18,9 +19,10 @@ const DEFAULTS = {
   blocks: []
 };
 
-const MINUTE_PX = 2;
+let MINUTE_PX = 2;
 
 let state = loadState();
+MINUTE_PX = state.minutePx || MINUTE_PX;
 init();
 
 function init() {
@@ -43,7 +45,8 @@ function loadState() {
       ...structuredClone(DEFAULTS),
       ...parsed,
       categories: parsed.categories || DEFAULTS.categories,
-      blocks: parsed.blocks || []
+      blocks: parsed.blocks || [],
+      minutePx: parsed.minutePx || DEFAULTS.minutePx
     };
   } catch {
     return structuredClone(DEFAULTS);
@@ -67,6 +70,25 @@ function bindControls() {
       renderBlocks();
       updateSummary();
     }
+  });
+  $("#zoomRange").value = MINUTE_PX;
+  $("#zoomRange").addEventListener("input", (e) => {
+    MINUTE_PX = state.minutePx = Number(e.target.value);
+    saveState();
+    renderTimeColumn();
+    renderDays();
+    renderBlocks();
+  });
+  $("#fitDayBtn").addEventListener("click", () => {
+    const body = $("#calendar");
+    const totalMinutes = (state.endHour - state.startHour) * 60;
+    const fitPx = body.clientHeight / totalMinutes;
+    MINUTE_PX = state.minutePx = fitPx;
+    $("#zoomRange").value = MINUTE_PX;
+    saveState();
+    renderTimeColumn();
+    renderDays();
+    renderBlocks();
   });
 
   // Click to add block with prefilled day/time
@@ -126,11 +148,12 @@ function setupModals() {
   $("#saveSettings").onclick = saveSettingsFromUI;
 }
 
-function openBlockModal(prefill = null, blockId = null) {
+function openBlockModal(prefill = null, blockId = null, groupId = null) {
   const modal = $("#blockModal");
   $("#modalTitle").textContent = blockId ? "Edit Block" : "Add Block";
   $("#deleteBlock").classList.toggle("hidden", !blockId);
   modal.dataset.editId = blockId || "";
+  modal.dataset.groupId = groupId || "";
 
   // Populate categories select
   const sel = $("#categorySelect");
@@ -149,7 +172,12 @@ function openBlockModal(prefill = null, blockId = null) {
   $("#newCategoryColor").value = "#3b82f6";
   // days
   $$("input[name='days']").forEach(cb => cb.checked = false);
-  if (prefill?.day != null) {
+  if (prefill?.days) {
+    prefill.days.forEach(d => {
+      const cb = $$("input[name='days']").find(c => Number(c.value) === d);
+      if (cb) cb.checked = true;
+    });
+  } else if (prefill?.day != null) {
     $$("input[name='days']").find(cb => Number(cb.value) === prefill.day).checked = true;
   }
   $("#startInput").value = prefill?.start || "09:00";
@@ -162,7 +190,9 @@ function openBlockModal(prefill = null, blockId = null) {
 
 function onSaveBlock(e) {
   e.preventDefault();
-  const editId = $("#blockModal").dataset.editId;
+  const modal = $("#blockModal");
+  const editId = modal.dataset.editId;
+  const groupId = modal.dataset.groupId || editId || cryptoId();
   const title = $("#titleInput").value.trim();
   let category = $("#categorySelect").value;
   const newCat = $("#newCategory").value.trim();
@@ -177,6 +207,12 @@ function onSaveBlock(e) {
     alert("Please fill title, pick at least one day, start and end time.");
     return;
   }
+  const startMin = hhmmToMinutes(start);
+  const endMin = hhmmToMinutes(end);
+  if (!(startMin >= 0 && endMin <= 1440 && startMin < endMin)) {
+    alert("Start and end must be within 00:00-24:00 and end after start.");
+    return;
+  }
   // Optional new category
   if (newCat) {
     // Only add if unique
@@ -187,22 +223,16 @@ function onSaveBlock(e) {
   }
 
   const objs = days.map(d => ({
-    id: editId || cryptoId(),
+    id: cryptoId(),
+    group: groupId,
     title, category, day: d, start, end, coreWork, altFocus
   }));
 
-  if (editId) {
-    // Replace the matching id, but only one day; for multi-day edit, create separate?
-    const idx = state.blocks.findIndex(b => b.id === editId);
-    if (idx >= 0) state.blocks.splice(idx, 1);
-    // When editing, if multiple days selected, create multiple new blocks (cloned)
-  } 
-  // Remove any duplicates with same id (if edit produced multiple days)
-  state.blocks = state.blocks.filter(b => b.id !== (editId || ""));
-  state.blocks.push(...objs.map((o,i)=> ({...o, id: editId ? (i===0? editId : cryptoId()) : o.id })));
+  state.blocks = state.blocks.filter(b => (b.group || b.id) !== groupId);
+  state.blocks.push(...objs);
 
   saveState();
-  hide($("#blockModal"));
+  hide(modal);
   renderBlocks();
   updateSummary();
   openCategoriesModal(true); // refresh list silently
@@ -338,17 +368,18 @@ function renderBlocks() {
 }
 
 function openEditBlock(b) {
+  const group = b.group || b.id;
+  const groupBlocks = state.blocks.filter(bl => (bl.group || bl.id) === group);
+  const days = groupBlocks.map(gb => gb.day);
   openBlockModal({
     title: b.title,
     category: b.category,
-    day: b.day,
+    days,
     start: b.start,
     end: b.end,
     coreWork: b.coreWork,
     altFocus: b.altFocus
-  }, b.id);
-  // Check appropriate day
-  $$("input[name='days']").forEach(cb => cb.checked = (Number(cb.value) === b.day));
+  }, b.id, group);
 }
 
 function updateSummary() {
@@ -468,10 +499,11 @@ function show(el) { el.classList.remove("hidden"); }
 function hide(el) { el.classList.add("hidden"); }
 function hhmmToMinutes(hhmm) {
   const [h,m] = hhmm.split(":").map(Number);
+  if (h === 24 && m === 0) return 1440;
   return h*60+m;
 }
 function minutesToHHMM(mins) {
-  mins = Math.max(0, mins);
+  mins = Math.min(1440, Math.max(0, mins));
   const h = Math.floor(mins/60);
   const m = mins%60;
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
