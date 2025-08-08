@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Weekly Planner — Calendar + Totals</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>Weekly Planner</h1>
+  <div class="controls">
+    <button id="addBlockBtn">+ Add Block</button>
+    <button id="categoriesBtn">Categories</button>
+    <button id="settingsBtn">Settings</button>
+    <button id="exportBtn">Export JSON</button>
+    <label class="importLabel">
+      Import JSON <input type="file" id="importInput" accept="application/json">
+    </label>
+    <button id="clearBtn">Clear All</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="panel">
+      <h3>Summary (hrs)</h3>
+      <div id="summary"></div>
+    </div>
+    <div class="panel">
+      <h3>Work Target</h3>
+      <div class="targetRow">
+        <span>Weekly target:</span>
+        <span id="workTargetLabel"></span>
+      </div>
+      <div class="progressOuter">
+        <div class="progressInner" id="workProgress"></div>
+      </div>
+      <div class="targetRow small">
+        <span>Core work:</span><span id="coreWorkSum">0.0 h</span>
+      </div>
+      <div class="targetRow small">
+        <span>Alt focus:</span><span id="altFocusSum">0.0 h</span>
+      </div>
+    </div>
+    <div class="panel note">
+      <p><strong>Tips</strong></p>
+      <ul>
+        <li>Click inside the calendar to add a block at that time.</li>
+        <li>Click a block to edit or delete.</li>
+        <li>Use <em>core work</em> vs <em>alt focus</em> flags for attention management.</li>
+        <li>All data saves to your browser (local only).</li>
+      </ul>
+    </div>
+  </aside>
+
+  <section class="calendarWrap">
+    <div class="calHeader">
+      <div class="timeCol"></div>
+      <div class="dayCol">Mon</div>
+      <div class="dayCol">Tue</div>
+      <div class="dayCol">Wed</div>
+      <div class="dayCol">Thu</div>
+      <div class="dayCol">Fri</div>
+      <div class="dayCol">Sat</div>
+      <div class="dayCol">Sun</div>
+    </div>
+    <div class="calBody" id="calendar">
+      <div class="timeCol" id="timeColumn"></div>
+      <div class="dayCol day" data-day="0"></div>
+      <div class="dayCol day" data-day="1"></div>
+      <div class="dayCol day" data-day="2"></div>
+      <div class="dayCol day" data-day="3"></div>
+      <div class="dayCol day" data-day="4"></div>
+      <div class="dayCol day" data-day="5"></div>
+      <div class="dayCol day" data-day="6"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Add/Edit Block Modal -->
+<div class="modal hidden" id="blockModal">
+  <div class="modalContent">
+    <h3 id="modalTitle">Add Block</h3>
+    <form id="blockForm">
+      <div class="row">
+        <label>Title</label>
+        <input type="text" id="titleInput" placeholder="e.g., Work, Sleep, Commute" required>
+      </div>
+      <div class="row">
+        <label>Category</label>
+        <select id="categorySelect"></select>
+        <input type="text" id="newCategory" placeholder="or new category name">
+        <input type="color" id="newCategoryColor" value="#3b82f6" title="Category color">
+      </div>
+      <div class="row">
+        <label>Day(s)</label>
+        <div class="days">
+          <label><input type="checkbox" name="days" value="0">Mon</label>
+          <label><input type="checkbox" name="days" value="1">Tue</label>
+          <label><input type="checkbox" name="days" value="2">Wed</label>
+          <label><input type="checkbox" name="days" value="3">Thu</label>
+          <label><input type="checkbox" name="days" value="4">Fri</label>
+          <label><input type="checkbox" name="days" value="5">Sat</label>
+          <label><input type="checkbox" name="days" value="6">Sun</label>
+        </div>
+      </div>
+      <div class="row two">
+        <div>
+          <label>Start</label>
+          <input type="time" id="startInput" step="900" required>
+        </div>
+        <div>
+          <label>End</label>
+          <input type="time" id="endInput" step="900" required>
+        </div>
+      </div>
+      <div class="row flags">
+        <label><input type="checkbox" id="coreWork"> Core work</label>
+        <label><input type="checkbox" id="altFocus"> Alternative focus</label>
+      </div>
+      <div class="actions">
+        <button type="submit" id="saveBlock">Save</button>
+        <button type="button" id="cancelBlock">Cancel</button>
+        <button type="button" class="danger hidden" id="deleteBlock">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Categories Modal -->
+<div class="modal hidden" id="categoriesModal">
+  <div class="modalContent">
+    <h3>Categories</h3>
+    <div id="categoryList"></div>
+    <div class="actions">
+      <button id="closeCategories">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal hidden" id="settingsModal">
+  <div class="modalContent">
+    <h3>Settings</h3>
+    <div class="row two">
+      <div>
+        <label>Day start (hour)</label>
+        <input type="number" id="startHour" min="0" max="23">
+      </div>
+      <div>
+        <label>Day end (hour)</label>
+        <input type="number" id="endHour" min="1" max="24">
+      </div>
+    </div>
+    <div class="row">
+      <label>Weekly work target (hours)</label>
+      <input type="number" id="workTarget" step="0.5">
+    </div>
+    <div class="actions">
+      <button id="saveSettings">Save</button>
+      <button id="cancelSettings">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>Local-only planner. Your data is stored in this browser.</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

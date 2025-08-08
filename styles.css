@@ -1,0 +1,58 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #111; background: #fafafa; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
+header h1 { margin: 0; font-size: 1.2rem; }
+.controls button, .controls label { margin-right: 8px; }
+button { background: #111827; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+button:hover { opacity: 0.9; }
+button.danger { background: #dc2626; }
+.importLabel { display: inline-flex; align-items: center; gap: 6px; background: #374151; color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+.importLabel input { display: none; }
+
+main { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px; }
+aside { display: flex; flex-direction: column; gap: 16px; }
+.panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+.panel.note ul { margin: 8px 0 0 20px; }
+.targetRow { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.targetRow.small { font-size: 0.9rem; color: #374151; }
+.progressOuter { width: 100%; height: 12px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 8px; }
+.progressInner { height: 100%; width: 0%; background: #10b981; transition: width 0.3s; }
+
+.calendarWrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+.calHeader, .calBody { display: grid; grid-template-columns: 70px repeat(7, 1fr); }
+.calHeader { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.calHeader .dayCol, .calHeader .timeCol { padding: 8px; font-weight: 600; text-align: center; }
+.calBody { height: calc(100vh - 210px); overflow: auto; position: relative; }
+
+.timeCol { background: #f9fafb; border-right: 1px solid #e5e7eb; }
+.timeLabel { height: 60px; padding: 2px 6px; font-size: 0.8rem; color: #6b7280; border-bottom: 1px dashed #eee; }
+
+.dayCol.day { position: relative; border-right: 1px solid #f1f5f9; }
+.dayCol.day::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background-image: linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 100% 30px; pointer-events: none; }
+.dayCol.day:last-child { border-right: none; }
+
+.block { position: absolute; left: 6px; right: 6px; border-radius: 6px; color: #111; padding: 6px; font-size: 0.85rem; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 1px 2px rgba(0,0,0,0.06); overflow: hidden; cursor: pointer; }
+.block .title { font-weight: 700; }
+.block .meta { font-size: 0.75rem; opacity: 0.9; }
+
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal.hidden { display: none; }
+.modalContent { background: #fff; width: 600px; max-width: 100%; border-radius: 12px; padding: 16px; border: 1px solid #e5e7eb; }
+.modal .row { margin-bottom: 10px; }
+.modal .row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal .row label { display: block; font-weight: 600; margin-bottom: 4px; }
+.modal .row input[type="text"], .modal .row input[type="time"], .modal .row input[type="number"], .modal .row select { width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; }
+.modal .row .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 0.9rem; }
+.modal .row.flags { display: flex; gap: 16px; align-items: center; }
+.modal .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+#categoryList .catItem { display: grid; grid-template-columns: 24px 1fr 80px 60px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed #eee; }
+#categoryList .swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.15); }
+
+footer { text-align: center; color: #6b7280; padding: 10px; font-size: 0.85rem; }
+
+@media (max-width: 1100px) {
+  main { grid-template-columns: 1fr; }
+  aside { order: 2; }
+  .calendarWrap { order: 1; }
+}
