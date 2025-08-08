@@ -18,6 +18,8 @@ const DEFAULTS = {
   blocks: []
 };
 
+const MINUTE_PX = 2;
+
 let state = loadState();
 init();
 
@@ -72,7 +74,7 @@ function bindControls() {
     col.addEventListener("click", (e) => {
       const rect = col.getBoundingClientRect();
       const y = e.clientY - rect.top + col.scrollTop;
-      const minutesFromStart = Math.round(y / 2); // 2px per minute (60px per hour -> 1px per min would be 60px; we use 2px/min)
+      const minutesFromStart = Math.round(y / MINUTE_PX); // MINUTE_PX px per minute
       const startMin = Math.max(0, minutesFromStart - 30); // prefill 30 min earlier
       const startTime = minutesToHHMM(state.startHour * 60 + startMin);
       const endTime = minutesToHHMM(state.startHour * 60 + startMin + 60);
@@ -92,7 +94,7 @@ function renderTimeColumn() {
   for (let h = state.startHour; h < state.endHour; h++) {
     const d = document.createElement("div");
     d.className = "timeLabel";
-    d.style.height = "60px"; // 60px per hour -> 1px per min, grid background is every 30px
+    d.style.height = (60 * MINUTE_PX) + "px";
     d.textContent = `${String(h).padStart(2,"0")}:00`;
     timeCol.appendChild(d);
   }
@@ -102,7 +104,7 @@ function renderDays() {
   // Set min-height based on hours
   const body = $("#calendar");
   const totalMinutes = (state.endHour - state.startHour) * 60;
-  const px = totalMinutes * 2; // 2px per minute
+  const px = totalMinutes * MINUTE_PX; // MINUTE_PX px per minute
   $$(".dayCol.day", body).forEach(col => {
     col.style.minHeight = px + "px";
   });
@@ -288,31 +290,50 @@ function syncSettingsUI() {
 
 function renderBlocks() {
   $$(".dayCol.day").forEach(col => col.innerHTML = "");
-  const minutePx = 2;
   const dayStartMin = state.startHour * 60;
-  state.blocks.forEach(b => {
-    const col = $(`.dayCol.day[data-day="${b.day}"]`);
+  const byDay = Array.from({ length: 7 }, () => []);
+  state.blocks.forEach(b => { if (byDay[b.day]) byDay[b.day].push(b); });
+
+  byDay.forEach((blocks, day) => {
+    const col = $(`.dayCol.day[data-day="${day}"]`);
     if (!col) return;
-    const startM = hhmmToMinutes(b.start);
-    const endM = hhmmToMinutes(b.end);
-    const top = (startM - dayStartMin) * minutePx;
-    const height = Math.max(10, (endM - startM) * minutePx);
-    const div = document.createElement("div");
-    div.className = "block";
-    const cat = state.categories.find(c => c.name === b.category);
-    div.style.background = (cat?.color || "#ddd");
-    div.style.top = `${top}px`;
-    div.style.height = `${height}px`;
-    div.dataset.id = b.id;
-    div.innerHTML = `
-      <div class="title">${escapeHtml(b.title || b.category)}</div>
-      <div class="meta">${b.start}–${b.end} • ${escapeHtml(b.category)}${b.coreWork ? " • core" : ""}${b.altFocus ? " • alt" : ""}</div>
-    `;
-    div.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openEditBlock(b);
+    const groups = groupOverlaps(blocks);
+    groups.forEach(group => {
+      group.sort((a,b)=>hhmmToMinutes(a.start)-hhmmToMinutes(b.start));
+      const cols = [];
+      group.forEach(b => {
+        const startM = hhmmToMinutes(b.start);
+        let i = 0;
+        while (cols[i] > startM) i++;
+        b._col = i;
+        cols[i] = hhmmToMinutes(b.end);
+      });
+      const maxCols = cols.length;
+      group.forEach(b => {
+        const startM = hhmmToMinutes(b.start);
+        const endM = hhmmToMinutes(b.end);
+        const top = (startM - dayStartMin) * MINUTE_PX;
+        const height = Math.max(10, (endM - startM) * MINUTE_PX);
+        const div = document.createElement("div");
+        div.className = "block";
+        const cat = state.categories.find(c => c.name === b.category);
+        div.style.background = (cat?.color || "#ddd");
+        div.style.top = `${top}px`;
+        div.style.height = `${height}px`;
+        div.style.left = `calc(${(100 / maxCols) * b._col}% + 6px)`;
+        div.style.width = `calc(${100 / maxCols}% - 12px)`;
+        div.dataset.id = b.id;
+        div.innerHTML = `
+          <div class="title">${escapeHtml(b.title || b.category)}</div>
+          <div class="meta">${b.start}–${b.end} • ${escapeHtml(b.category)}${b.coreWork ? " • core" : ""}${b.altFocus ? " • alt" : ""}</div>
+        `;
+        div.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openEditBlock(b);
+        });
+        col.appendChild(div);
+      });
     });
-    col.appendChild(div);
   });
 }
 
@@ -364,6 +385,16 @@ function updateSummary() {
   table.appendChild(tbody);
   wrap.appendChild(table);
 
+  const totalsDiv = document.createElement("div");
+  totalsDiv.className = "groupTotals";
+  cats.forEach(cat => {
+    const mins = minsByCatDay[cat].reduce((a,b)=>a+b,0);
+    const row = document.createElement("div");
+    row.innerHTML = `<span>${escapeHtml(cat)}</span><span>${(mins/60).toFixed(1)} h</span>`;
+    totalsDiv.appendChild(row);
+  });
+  wrap.appendChild(totalsDiv);
+
   // Work progress
   const pct = Math.min(100, (totalWork/60) / state.workTarget * 100);
   $("#workProgress").style.width = pct + "%";
@@ -402,6 +433,35 @@ function importJSON(e) {
     }
   };
   reader.readAsText(file);
+}
+
+function groupOverlaps(blocks) {
+  const remaining = blocks.slice();
+  const groups = [];
+  while (remaining.length) {
+    const first = remaining.shift();
+    const group = [first];
+    let added = true;
+    while (added) {
+      added = false;
+      for (let i = remaining.length - 1; i >= 0; i--) {
+        if (group.some(g => intervalsOverlap(g, remaining[i]))) {
+          group.push(remaining.splice(i,1)[0]);
+          added = true;
+        }
+      }
+    }
+    groups.push(group);
+  }
+  return groups;
+}
+
+function intervalsOverlap(a, b) {
+  const aStart = hhmmToMinutes(a.start);
+  const aEnd = hhmmToMinutes(a.end);
+  const bStart = hhmmToMinutes(b.start);
+  const bEnd = hhmmToMinutes(b.end);
+  return aStart < bEnd && bStart < aEnd;
 }
 
 function show(el) { el.classList.remove("hidden"); }
