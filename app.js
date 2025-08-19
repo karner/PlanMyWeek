@@ -29,10 +29,23 @@ function init() {
   renderTimeColumn();
   renderDays();
   setupModals();
+  force24HourTimeInputs();
   syncSettingsUI();
   updateSummary();
   renderBlocks();
   bindControls();
+}
+
+function force24HourTimeInputs() {
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if (isSafari) {
+    $$('#blockForm input[type="time"]').forEach(inp => {
+      inp.type = 'text';
+      inp.placeholder = 'HH:MM';
+      inp.pattern = '([01]\\d|2[0-3]):[0-5]\\d';
+      inp.setAttribute('inputmode', 'numeric');
+    });
+  }
 }
 
 function loadState() {
