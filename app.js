@@ -29,10 +29,25 @@ function init() {
   renderTimeColumn();
   renderDays();
   setupModals();
+  force24HourTimeInputs();
   syncSettingsUI();
   updateSummary();
   renderBlocks();
   bindControls();
+}
+
+function force24HourTimeInputs() {
+  const test = document.createElement('input');
+  test.type = 'time';
+  test.value = '24:00';
+  if (test.value !== '24:00') {
+    $$('#blockForm input[type="time"]').forEach(inp => {
+      inp.type = 'text';
+      inp.placeholder = 'HH:MM';
+      inp.pattern = '((?:[01]\\d|2[0-3]):[0-5]\\d|24:00)';
+      inp.setAttribute('inputmode', 'numeric');
+    });
+  }
 }
 
 function loadState() {
@@ -191,6 +206,11 @@ function openBlockModal(prefill = null, blockId = null, groupId = null) {
 function onSaveBlock(e) {
   e.preventDefault();
   const modal = $("#blockModal");
+  const form = $("#blockForm");
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
   const editId = modal.dataset.editId;
   const groupId = modal.dataset.groupId || editId || cryptoId();
   const title = $("#titleInput").value.trim();
