@@ -1,5 +1,7 @@
-Weekly Planner — Calendar + Totals
-===================================
+Plan MyWeek
+===========
+
+Part of the MyWeek suite alongside upcoming Track MyWeek and Optimize MyWeek apps.
 
 How to use
 ----------
