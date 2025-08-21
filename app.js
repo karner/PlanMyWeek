@@ -1,4 +1,4 @@
-// Weekly Planner — Vanilla JS
+// Plan MyWeek — Vanilla JS
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
