@@ -7,6 +7,7 @@ const DEFAULTS = {
   endHour: 24,
   workTarget: 38.5,
   minutePx: 2,
+  theme: "bright-cold",
   categories: [
     { name: "Sleep", color: "#bef264" },
     { name: "Children", color: "#fca5a5" },
@@ -26,6 +27,7 @@ MINUTE_PX = state.minutePx || MINUTE_PX;
 init();
 
 function init() {
+  applyTheme();
   renderTimeColumn();
   renderDays();
   setupModals();
@@ -61,7 +63,8 @@ function loadState() {
       ...parsed,
       categories: parsed.categories || DEFAULTS.categories,
       blocks: parsed.blocks || [],
-      minutePx: parsed.minutePx || DEFAULTS.minutePx
+      minutePx: parsed.minutePx || DEFAULTS.minutePx,
+      theme: parsed.theme || DEFAULTS.theme
     };
   } catch {
     return structuredClone(DEFAULTS);
@@ -70,6 +73,10 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem("weekly-planner-state-v1", JSON.stringify(state));
+}
+
+function applyTheme() {
+  document.body.dataset.theme = state.theme || "bright-cold";
 }
 
 function bindControls() {
@@ -311,6 +318,7 @@ function openSettingsModal() {
   $("#startHour").value = state.startHour;
   $("#endHour").value = state.endHour;
   $("#workTarget").value = state.workTarget;
+  $("#themeSelect").value = state.theme || "bright-cold";
   show($("#settingsModal"));
 }
 
@@ -318,6 +326,7 @@ function saveSettingsFromUI() {
   const sh = Number($("#startHour").value);
   const eh = Number($("#endHour").value);
   const wt = Number($("#workTarget").value);
+  const th = $("#themeSelect").value;
   if (!(sh>=0 && sh<24 && eh>0 && eh<=24 && eh>sh)) {
     alert("Please set valid day start/end hours.");
     return;
@@ -325,8 +334,10 @@ function saveSettingsFromUI() {
   state.startHour = sh;
   state.endHour = eh;
   state.workTarget = wt || 38.5;
+  state.theme = th;
   saveState();
   hide($("#settingsModal"));
+  applyTheme();
   renderTimeColumn();
   renderDays();
   renderBlocks();
